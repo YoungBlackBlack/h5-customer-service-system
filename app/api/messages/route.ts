@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json(
+        { error: 'Database not configured', messages: [] },
+        { status: 200 }
+      )
+    }
+
     const messages = await prisma.message.findMany({
       include: {
         admin: true,
@@ -15,8 +23,12 @@ export async function GET() {
     return NextResponse.json(messages)
   } catch (error) {
     console.error('Get messages error:', error)
+    // 在构建时返回空数组而不是错误
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === undefined) {
+      return NextResponse.json([])
+    }
     return NextResponse.json(
-      { error: 'Failed to get messages' },
+      { error: 'Failed to get messages', messages: [] },
       { status: 500 }
     )
   }
@@ -24,6 +36,14 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const { content, type, fileUrl, fileType, fileName, adminId, userId } = body
 
@@ -84,6 +104,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     await prisma.message.deleteMany()
     return NextResponse.json({ message: 'All messages cleared' })
   } catch (error) {

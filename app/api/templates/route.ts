@@ -3,6 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json([])
+    }
+
     const { searchParams } = new URL(request.url)
     const adminId = searchParams.get('adminId') || '1'
 
@@ -14,6 +19,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(templates)
   } catch (error) {
     console.error('Get templates error:', error)
+    // 在构建时返回空数组
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === undefined) {
+      return NextResponse.json([])
+    }
     return NextResponse.json(
       { error: 'Failed to get templates' },
       { status: 500 }
@@ -23,6 +32,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const { title, content, category, adminId = '1' } = body
 
@@ -66,6 +83,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const templateId = searchParams.get('id')
 

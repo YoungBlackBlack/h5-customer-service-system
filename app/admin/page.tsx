@@ -22,9 +22,23 @@ interface AdminProfile {
 
 interface Template {
   id: string
+  order: number
   title: string
   content: string
   category: string
+}
+
+interface Link {
+  id: string
+  name: string
+  url: string
+  imageUrl: string
+  title: string
+  description: string
+  buttonText: string
+  autoRedirect: boolean
+  redirectDelay: number
+  isActive: boolean
 }
 
 export default function AdminPage() {
@@ -36,19 +50,20 @@ export default function AdminPage() {
     linkText: '下载APP防止失联'
   })
   const [templates, setTemplates] = useState<Template[]>([
-    { id: '1', title: '小米安装问题', content: '小米安装不了 点击问我', category: 'install' },
-    { id: '2', title: '苹果安装问题', content: '苹果安装不了 点击问我', category: 'install' },
-    { id: '3', title: '华为安装问题', content: '华为安装不了 点击问我', category: 'install' },
-    { id: '4', title: '成功案例1', content: '成功案例1 点击问我', category: 'success' },
-    { id: '5', title: '成功案例2', content: '成功案例2 点击问我', category: 'success' },
-    { id: '6', title: '下载问题', content: '软件下载不了怎么办', category: 'download' }
+    { id: '1', order: 1, title: '小米安装问题', content: '小米安装不了 点击问我', category: 'install' },
+    { id: '2', order: 2, title: '苹果安装问题', content: '苹果安装不了 点击问我', category: 'install' },
+    { id: '3', order: 3, title: '华为安装问题', content: '华为安装不了 点击问我', category: 'install' },
+    { id: '4', order: 4, title: '成功案例1', content: '成功案例1 点击问我', category: 'success' },
+    { id: '5', order: 5, title: '成功案例2', content: '成功案例2 点击问我', category: 'success' },
+    { id: '6', order: 6, title: '下载问题', content: '软件下载不了怎么办', category: 'download' }
   ])
+  const [links, setLinks] = useState<Link[]>([])
   
-  const [activeTab, setActiveTab] = useState<'messages' | 'profile' | 'templates' | 'files'>('messages')
+  const [activeTab, setActiveTab] = useState<'messages' | 'links' | 'settings'>('messages')
   const [messageInput, setMessageInput] = useState('')
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editProfile, setEditProfile] = useState(profile)
-  const [newTemplate, setNewTemplate] = useState({ title: '', content: '', category: 'general' })
+  const [newTemplate, setNewTemplate] = useState({ order: templates.length + 1, title: '', content: '', category: 'general' })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSendMessage = async () => {
@@ -105,7 +120,7 @@ export default function AdminPage() {
         ...newTemplate
       }
       setTemplates(prev => [...prev, template])
-      setNewTemplate({ title: '', content: '', category: 'general' })
+      setNewTemplate({ order: templates.length + 2, title: '', content: '', category: 'general' })
     }
   }
 
@@ -119,7 +134,7 @@ export default function AdminPage() {
   return (
     <div className="admin-container">
       <div className="admin-header">
-        <Link href="/" className="back-btn">← 返回首页</Link>
+        <div className="header-title">🔧 客服管理后台</div>
         <h1>客服管理后台</h1>
         <div className="admin-info">
           <img src={profile.avatar} alt="头像" className="admin-avatar" />
@@ -137,22 +152,16 @@ export default function AdminPage() {
               💬 消息管理
             </button>
             <button 
-              className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveTab('profile')}
+              className={`nav-item ${activeTab === 'links' ? 'active' : ''}`}
+              onClick={() => setActiveTab('links')}
             >
-              👤 个人资料
+              🔗 链接管理
             </button>
             <button 
-              className={`nav-item ${activeTab === 'templates' ? 'active' : ''}`}
-              onClick={() => setActiveTab('templates')}
+              className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
             >
-              📝 消息模板
-            </button>
-            <button 
-              className={`nav-item ${activeTab === 'files' ? 'active' : ''}`}
-              onClick={() => setActiveTab('files')}
-            >
-              📁 文件管理
+              ⚙️ 系统设置
             </button>
           </nav>
         </div>
@@ -160,9 +169,9 @@ export default function AdminPage() {
         <div className="admin-main">
           {/* 消息管理 */}
           {activeTab === 'messages' && (
-            <div className="messages-panel">
-              <div className="messages-header">
-                <h2>实时消息</h2>
+            <div className="content-panel">
+              <div className="panel-header">
+                <h2>💬 实时消息管理</h2>
                 <span className="message-count">{messages.length} 条消息</span>
               </div>
               
@@ -207,13 +216,13 @@ export default function AdminPage() {
                     style={{ display: 'none' }}
                   />
                   <button
-                    className="file-btn"
+                    className="action-btn secondary"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     📎 上传文件
                   </button>
                   <button
-                    className="send-btn"
+                    className="action-btn primary"
                     onClick={handleSendMessage}
                   >
                     发送消息
@@ -223,155 +232,240 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* 个人资料 */}
-          {activeTab === 'profile' && (
-            <div className="profile-panel">
-              <div className="profile-header">
-                <h2>个人资料设置</h2>
-                <button
-                  className="edit-btn"
-                  onClick={() => isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true)}
-                >
-                  {isEditingProfile ? '保存' : '编辑'}
-                </button>
+          {/* 链接管理 */}
+          {activeTab === 'links' && (
+            <div className="content-panel">
+              <div className="panel-header">
+                <h2>🔗 客服链接管理</h2>
+                <button className="action-btn primary">+ 新建链接</button>
               </div>
 
-              {isEditingProfile ? (
-                <div className="profile-form">
-                  <div className="form-group">
-                    <label>头像 URL:</label>
-                    <input
-                      type="text"
-                      value={editProfile.avatar}
-                      onChange={(e) => setEditProfile({...editProfile, avatar: e.target.value})}
-                      placeholder="头像链接地址"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>昵称:</label>
-                    <input
-                      type="text"
-                      value={editProfile.nickname}
-                      onChange={(e) => setEditProfile({...editProfile, nickname: e.target.value})}
-                      placeholder="客服昵称"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>链接文字:</label>
-                    <input
-                      type="text"
-                      value={editProfile.linkText}
-                      onChange={(e) => setEditProfile({...editProfile, linkText: e.target.value})}
-                      placeholder="链接显示文字"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="profile-display">
-                  <div className="profile-avatar">
-                    <img src={profile.avatar} alt="头像" />
-                  </div>
-                  <div className="profile-info">
-                    <div className="info-item">
-                      <label>昵称:</label>
-                      <span>{profile.nickname}</span>
+              <div className="links-grid">
+                {links.map(link => (
+                  <div key={link.id} className="link-card">
+                    <div className="link-preview">
+                      <img src={link.imageUrl} alt={link.title} />
+                      <div className="link-overlay">
+                        <span className={`status-badge ${link.isActive ? 'active' : 'inactive'}`}>
+                          {link.isActive ? '启用' : '禁用'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="info-item">
-                      <label>链接文字:</label>
-                      <span>{profile.linkText}</span>
+                    <div className="link-info">
+                      <h3>{link.name}</h3>
+                      <p className="link-title">{link.title}</p>
+                      <p className="link-desc">{link.description}</p>
+                      <div className="link-url">
+                        <code>{window.location.origin}{link.url}</code>
+                      </div>
+                    </div>
+                    <div className="link-actions">
+                      <button className="action-btn secondary">编辑</button>
+                      <button className="action-btn danger">删除</button>
+                      <button className="action-btn">复制链接</button>
                     </div>
                   </div>
-                </div>
-              )}
+                ))}
+                
+                {links.length === 0 && (
+                  <div className="empty-state">
+                    <div className="empty-icon">🔗</div>
+                    <h3>暂无客服链接</h3>
+                    <p>创建您的第一个客服链接，每个链接可以单独配置</p>
+                    <button className="action-btn primary">创建链接</button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* 消息模板 */}
-          {activeTab === 'templates' && (
-            <div className="templates-panel">
-              <div className="templates-header">
-                <h2>消息模板管理</h2>
+          {/* 系统设置 */}
+          {activeTab === 'settings' && (
+            <div className="content-panel">
+              <div className="panel-header">
+                <h2>⚙️ 系统设置</h2>
               </div>
 
-              <div className="add-template">
-                <h3>添加新模板</h3>
-                <div className="template-form">
-                  <input
-                    type="text"
-                    placeholder="模板标题"
-                    value={newTemplate.title}
-                    onChange={(e) => setNewTemplate({...newTemplate, title: e.target.value})}
-                  />
-                  <textarea
-                    placeholder="模板内容"
-                    value={newTemplate.content}
-                    onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
-                    rows={3}
-                  />
-                  <select
-                    value={newTemplate.category}
-                    onChange={(e) => setNewTemplate({...newTemplate, category: e.target.value})}
-                  >
-                    <option value="general">通用</option>
-                    <option value="install">安装问题</option>
-                    <option value="success">成功案例</option>
-                    <option value="download">下载问题</option>
-                  </select>
-                  <button onClick={handleAddTemplate}>添加模板</button>
+              <div className="settings-sections">
+                {/* 个人资料设置 */}
+                <div className="settings-section">
+                  <h3>👤 个人资料</h3>
+                  <div className="settings-content">
+                    {isEditingProfile ? (
+                      <div className="profile-form">
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>客服昵称</label>
+                            <input
+                              type="text"
+                              value={editProfile.nickname}
+                              onChange={(e) => setEditProfile({...editProfile, nickname: e.target.value})}
+                              placeholder="客服昵称"
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>头像链接</label>
+                            <input
+                              type="text"
+                              value={editProfile.avatar}
+                              onChange={(e) => setEditProfile({...editProfile, avatar: e.target.value})}
+                              placeholder="头像链接地址"
+                            />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>欢迎文字</label>
+                          <input
+                            type="text"
+                            value={editProfile.linkText}
+                            onChange={(e) => setEditProfile({...editProfile, linkText: e.target.value})}
+                            placeholder="欢迎文字"
+                          />
+                        </div>
+                        <div className="form-actions">
+                          <button className="action-btn secondary" onClick={() => setIsEditingProfile(false)}>
+                            取消
+                          </button>
+                          <button className="action-btn primary" onClick={handleSaveProfile}>
+                            保存设置
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="profile-display">
+                        <div className="profile-card">
+                          <img src={profile.avatar} alt="头像" className="profile-avatar" />
+                          <div className="profile-details">
+                            <h4>{profile.nickname}</h4>
+                            <p>{profile.linkText}</p>
+                          </div>
+                          <button className="action-btn secondary" onClick={() => setIsEditingProfile(true)}>
+                            编辑资料
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="templates-list">
-                {templates.map(template => (
-                  <div key={template.id} className="template-item">
-                    <div className="template-info">
-                      <h4>{template.title}</h4>
-                      <p>{template.content}</p>
-                      <span className="template-category">{template.category}</span>
-                    </div>
-                    <div className="template-actions">
-                      <button
-                        className="use-btn"
-                        onClick={() => handleSendTemplate(template)}
-                      >
-                        使用
+                {/* 消息模板设置 */}
+                <div className="settings-section">
+                  <h3>📝 消息模板</h3>
+                  <div className="settings-content">
+                    <div className="template-form">
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>编号</label>
+                          <input
+                            type="number"
+                            placeholder="排序编号"
+                            min="1"
+                            value={newTemplate.order}
+                            onChange={(e) => setNewTemplate({...newTemplate, order: parseInt(e.target.value) || 1})}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>模板标题</label>
+                          <input
+                            type="text"
+                            placeholder="模板标题"
+                            value={newTemplate.title}
+                            onChange={(e) => setNewTemplate({...newTemplate, title: e.target.value})}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>分类</label>
+                          <select
+                            value={newTemplate.category}
+                            onChange={(e) => setNewTemplate({...newTemplate, category: e.target.value})}
+                          >
+                            <option value="general">通用</option>
+                            <option value="install">安装问题</option>
+                            <option value="success">成功案例</option>
+                            <option value="download">下载问题</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>模板内容</label>
+                        <textarea
+                          placeholder="模板内容"
+                          value={newTemplate.content}
+                          onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                          rows={3}
+                        />
+                      </div>
+                      <button className="action-btn primary" onClick={handleAddTemplate}>
+                        添加模板
                       </button>
-                      <button className="delete-btn">删除</button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* 文件管理 */}
-          {activeTab === 'files' && (
-            <div className="files-panel">
-              <div className="files-header">
-                <h2>文件管理</h2>
-                <button
-                  className="upload-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  📤 上传文件
-                </button>
-              </div>
-              
-              <div className="files-grid">
-                {messages.filter(m => m.fileUrl).map(message => (
-                  <div key={message.id} className="file-item">
-                    {message.fileType === 'IMAGE' && (
-                      <img src={message.fileUrl} alt={message.fileName} />
-                    )}
-                    {message.fileType === 'VIDEO' && (
-                      <video src={message.fileUrl} controls />
-                    )}
-                    <div className="file-info">
-                      <span className="file-name">{message.fileName}</span>
-                      <span className="file-time">{formatTime(message.createdAt)}</span>
+                    <div className="templates-list">
+                      {templates.sort((a, b) => a.order - b.order).map(template => (
+                        <div key={template.id} className="template-card">
+                          <div className="template-order">#{template.order}</div>
+                          <div className="template-content">
+                            <h4>{template.title}</h4>
+                            <p>{template.content}</p>
+                            <span className="template-category">{template.category}</span>
+                          </div>
+                          <div className="template-actions">
+                            <button className="action-btn small" onClick={() => handleSendTemplate(template)}>
+                              使用
+                            </button>
+                            <button className="action-btn small secondary">编辑</button>
+                            <button className="action-btn small danger">删除</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* 文件管理设置 */}
+                <div className="settings-section">
+                  <h3>📁 文件管理</h3>
+                  <div className="settings-content">
+                    <div className="upload-area">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept="image/*,video/*"
+                        style={{ display: 'none' }}
+                        multiple
+                      />
+                      <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
+                        <div className="upload-icon">📤</div>
+                        <p>点击或拖拽文件到这里上传</p>
+                        <span>支持图片、视频格式</span>
+                      </div>
+                    </div>
+
+                    <div className="files-grid">
+                      {messages.filter(m => m.fileUrl).map(message => (
+                        <div key={message.id} className="file-card">
+                          <div className="file-preview">
+                            {message.fileType === 'IMAGE' && (
+                              <img src={message.fileUrl} alt={message.fileName} />
+                            )}
+                            {message.fileType === 'VIDEO' && (
+                              <video src={message.fileUrl} />
+                            )}
+                          </div>
+                          <div className="file-info">
+                            <span className="file-name">{message.fileName}</span>
+                            <span className="file-time">{formatTime(message.createdAt)}</span>
+                          </div>
+                          <div className="file-actions">
+                            <button className="action-btn small">预览</button>
+                            <button className="action-btn small danger">删除</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -462,20 +556,27 @@ export default function AdminPage() {
           overflow-y: auto;
         }
 
-        .messages-panel, .profile-panel, .templates-panel, .files-panel {
+        .content-panel {
           background: white;
-          border-radius: 8px;
-          padding: 1.5rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          overflow: hidden;
         }
 
-        .messages-header, .profile-header, .templates-header, .files-header {
+        .panel-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1rem;
-          border-bottom: 1px solid #e0e0e0;
+          padding: 1.5rem 2rem;
+          background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+          border-bottom: 1px solid #dee2e6;
+        }
+
+        .panel-header h2 {
+          margin: 0;
+          color: #333;
+          font-size: 1.25rem;
+          font-weight: 600;
         }
 
         .message-count {
@@ -486,7 +587,7 @@ export default function AdminPage() {
         .messages-list {
           max-height: 400px;
           overflow-y: auto;
-          margin-bottom: 1.5rem;
+          padding: 1.5rem 2rem;
         }
 
         .message-item {
@@ -535,7 +636,8 @@ export default function AdminPage() {
 
         .message-compose {
           border-top: 1px solid #e0e0e0;
-          padding-top: 1rem;
+          padding: 1.5rem 2rem;
+          background: #f8f9fa;
         }
 
         .compose-input textarea {
@@ -552,26 +654,41 @@ export default function AdminPage() {
           gap: 1rem;
         }
 
-        .file-btn, .send-btn, .edit-btn, .upload-btn {
-          padding: 0.75rem 1.5rem;
+        /* 新的按钮样式系统 */
+        .action-btn {
+          padding: 0.5rem 1rem;
           border: none;
           border-radius: 6px;
           cursor: pointer;
           font-weight: 500;
-          transition: all 0.2s;
+          font-size: 0.875rem;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
         }
 
-        .file-btn {
-          background: #2196f3;
+        .action-btn.primary {
+          background: #4f46e5;
           color: white;
         }
 
-        .send-btn, .edit-btn, .upload-btn {
-          background: #4caf50;
+        .action-btn.secondary {
+          background: #6b7280;
           color: white;
         }
 
-        .file-btn:hover, .send-btn:hover, .edit-btn:hover, .upload-btn:hover {
+        .action-btn.danger {
+          background: #ef4444;
+          color: white;
+        }
+
+        .action-btn.small {
+          padding: 0.25rem 0.75rem;
+          font-size: 0.75rem;
+        }
+
+        .action-btn:hover {
           opacity: 0.9;
           transform: translateY(-1px);
         }
@@ -749,6 +866,350 @@ export default function AdminPage() {
           color: #666;
         }
 
+        /* 链接管理样式 */
+        .links-grid {
+          padding: 2rem;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .link-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+          transition: all 0.2s ease;
+        }
+
+        .link-card:hover {
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .link-preview {
+          position: relative;
+          height: 200px;
+          overflow: hidden;
+        }
+
+        .link-preview img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .link-overlay {
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+        }
+
+        .status-badge {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .status-badge.active {
+          background: #10b981;
+          color: white;
+        }
+
+        .status-badge.inactive {
+          background: #6b7280;
+          color: white;
+        }
+
+        .link-info {
+          padding: 1rem;
+        }
+
+        .link-info h3 {
+          margin: 0 0 0.5rem 0;
+          color: #111827;
+          font-size: 1.1rem;
+        }
+
+        .link-title {
+          margin: 0 0 0.5rem 0;
+          color: #4b5563;
+          font-size: 0.9rem;
+        }
+
+        .link-desc {
+          margin: 0 0 1rem 0;
+          color: #6b7280;
+          font-size: 0.875rem;
+          line-height: 1.4;
+        }
+
+        .link-url {
+          margin-bottom: 1rem;
+        }
+
+        .link-url code {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          word-break: break-all;
+        }
+
+        .link-actions {
+          display: flex;
+          gap: 0.5rem;
+          padding: 0 1rem 1rem;
+        }
+
+        .empty-state {
+          padding: 4rem 2rem;
+          text-align: center;
+          color: #6b7280;
+        }
+
+        .empty-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+          margin: 0 0 0.5rem 0;
+          color: #374151;
+        }
+
+        .empty-state p {
+          margin: 0 0 2rem 0;
+        }
+
+        /* 设置页面样式 */
+        .settings-sections {
+          padding: 2rem;
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+        }
+
+        .settings-section {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .settings-section h3 {
+          margin: 0;
+          padding: 1rem 1.5rem;
+          background: #f9fafb;
+          color: #374151;
+          font-size: 1rem;
+          font-weight: 600;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .settings-content {
+          padding: 1.5rem;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-group label {
+          font-weight: 500;
+          color: #374151;
+          font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          padding: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: flex-end;
+          margin-top: 1rem;
+        }
+
+        .profile-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+        }
+
+        .profile-avatar {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .profile-details h4 {
+          margin: 0 0 0.25rem 0;
+          color: #111827;
+        }
+
+        .profile-details p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 0.875rem;
+        }
+
+        .template-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          margin-bottom: 0.5rem;
+        }
+
+        .template-order {
+          font-weight: 600;
+          color: #4f46e5;
+          font-size: 0.875rem;
+          min-width: 2rem;
+        }
+
+        .template-content {
+          flex: 1;
+        }
+
+        .template-content h4 {
+          margin: 0 0 0.25rem 0;
+          color: #111827;
+          font-size: 0.9rem;
+        }
+
+        .template-content p {
+          margin: 0 0 0.5rem 0;
+          color: #6b7280;
+          font-size: 0.8rem;
+          line-height: 1.4;
+        }
+
+        .template-category {
+          background: #dbeafe;
+          color: #1e40af;
+          padding: 0.125rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+        }
+
+        .template-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .upload-area {
+          margin-bottom: 1.5rem;
+        }
+
+        .upload-zone {
+          border: 2px dashed #d1d5db;
+          border-radius: 8px;
+          padding: 2rem;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .upload-zone:hover {
+          border-color: #4f46e5;
+          background: #f8fafc;
+        }
+
+        .upload-icon {
+          font-size: 2rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+          margin: 0 0 0.25rem 0;
+          color: #374151;
+          font-weight: 500;
+        }
+
+        .upload-zone span {
+          color: #6b7280;
+          font-size: 0.875rem;
+        }
+
+        .files-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+        }
+
+        .file-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .file-preview {
+          height: 120px;
+          overflow: hidden;
+        }
+
+        .file-preview img,
+        .file-preview video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .file-info {
+          padding: 0.75rem;
+        }
+
+        .file-name {
+          display: block;
+          font-weight: 500;
+          color: #111827;
+          font-size: 0.875rem;
+          margin-bottom: 0.25rem;
+        }
+
+        .file-time {
+          color: #6b7280;
+          font-size: 0.75rem;
+        }
+
+        .file-actions {
+          display: flex;
+          gap: 0.5rem;
+          padding: 0 0.75rem 0.75rem;
+        }
+
         @media (max-width: 768px) {
           .admin-content {
             flex-direction: column;
@@ -769,13 +1230,21 @@ export default function AdminPage() {
             min-width: 120px;
           }
           
-          .template-form {
-            flex-direction: column;
-            align-items: stretch;
+          .links-grid {
+            grid-template-columns: 1fr;
+            padding: 1rem;
+          }
+          
+          .form-row {
+            grid-template-columns: 1fr;
           }
           
           .files-grid {
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          }
+          
+          .settings-sections {
+            padding: 1rem;
           }
         }
       `}</style>

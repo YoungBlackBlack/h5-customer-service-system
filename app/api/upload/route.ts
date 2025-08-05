@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 })
     }
 
+    // 检查 Vercel Blob 配置
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json({ error: 'File storage not configured' }, { status: 500 })
+    }
+
     // 上传到 Vercel Blob
     const filename = `${Date.now()}-${file.name}`
     const blob = await put(filename, file, { access: 'public' })
@@ -29,18 +34,25 @@ export async function POST(request: NextRequest) {
     const fileType = file.type.startsWith('image/') ? 'IMAGE' : 
                     file.type.startsWith('video/') ? 'VIDEO' : 'DOCUMENT'
 
-    // 保存文件信息到数据库
-    const fileRecord = await prisma.fileUpload.create({
-      data: {
-        fileName: file.name,
-        fileUrl: blob.url,
-        fileType,
-        fileSize: file.size
+    // 保存文件信息到数据库（如果数据库可用）
+    let fileRecord = null
+    if (process.env.POSTGRES_PRISMA_URL) {
+      try {
+        fileRecord = await prisma.fileUpload.create({
+          data: {
+            fileName: file.name,
+            fileUrl: blob.url,
+            fileType,
+            fileSize: file.size
+          }
+        })
+      } catch (dbError) {
+        console.warn('Database not available, file uploaded to blob only:', dbError)
       }
-    })
+    }
 
     return NextResponse.json({ 
-      id: fileRecord.id,
+      id: fileRecord?.id || Date.now().toString(),
       fileUrl: blob.url,
       fileType,
       fileName: file.name,
@@ -58,6 +70,11 @@ export async function POST(request: NextRequest) {
 // 获取上传的文件列表
 export async function GET() {
   try {
+    // 检查数据库连接
+    if (!process.env.POSTGRES_PRISMA_URL) {
+      return NextResponse.json([])
+    }
+
     const files = await prisma.fileUpload.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50
@@ -66,6 +83,10 @@ export async function GET() {
     return NextResponse.json(files)
   } catch (error) {
     console.error('Get files error:', error)
+    // 在构建时返回空数组
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === undefined) {
+      return NextResponse.json([])
+    }
     return NextResponse.json(
       { error: 'Failed to get files' },
       { status: 500 }

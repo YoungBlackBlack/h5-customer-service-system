@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  nickname  String   @default("在线客服")
+  avatar    String   @default("/default-avatar.png")
+  linkText  String   @default("下载APP防止失联")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages  Message[]
+  templates MessageTemplate[]
+
+  @@map("admins")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  nickname  String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages  Message[]
+
+  @@map("users")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  content   String?
+  type      MessageType
+  fileUrl   String?
+  fileType  FileType?
+  fileName  String?
+  createdAt DateTime    @default(now())
+  
+  adminId   String?
+  admin     Admin?      @relation(fields: [adminId], references: [id])
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+
+  @@map("messages")
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String   @default("general")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id])
+
+  @@map("message_templates")
+}
+
+model FileUpload {
+  id        String   @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileType  FileType
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  @@map("file_uploads")
+}
+
+enum MessageType {
+  USER
+  ADMIN
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
-import { join } from 'path'
+import { put } from '@vercel/blob'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,26 +11,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    // 检查文件大小 (最大 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large. Max size is 10MB' }, { status: 400 })
+    }
 
+    // 检查文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/mov', 'video/avi']
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 })
+    }
+
+    // 上传到 Vercel Blob
     const filename = `${Date.now()}-${file.name}`
-    const filepath = join(process.cwd(), 'public/uploads', filename)
+    const blob = await put(filename, file, { access: 'public' })
 
-    await writeFile(filepath, buffer)
+    const fileType = file.type.startsWith('image/') ? 'IMAGE' : 
+                    file.type.startsWith('video/') ? 'VIDEO' : 'DOCUMENT'
 
-    const fileUrl = `/uploads/${filename}`
-    const fileType = file.type.startsWith('image/') ? 'image' : 'video'
+    // 保存文件信息到数据库
+    const fileRecord = await prisma.fileUpload.create({
+      data: {
+        fileName: file.name,
+        fileUrl: blob.url,
+        fileType,
+        fileSize: file.size
+      }
+    })
 
     return NextResponse.json({ 
-      fileUrl,
+      id: fileRecord.id,
+      fileUrl: blob.url,
       fileType,
-      filename: file.name
+      fileName: file.name,
+      fileSize: file.size
     })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json(
       { error: 'Failed to upload file' },
+      { status: 500 }
+    )
+  }
+}
+
+// 获取上传的文件列表
+export async function GET() {
+  try {
+    const files = await prisma.fileUpload.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    })
+
+    return NextResponse.json(files)
+  } catch (error) {
+    console.error('Get files error:', error)
+    return NextResponse.json(
+      { error: 'Failed to get files' },
       { status: 500 }
     )
   }
